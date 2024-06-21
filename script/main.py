@@ -5,6 +5,8 @@ from random import randint
 
 SCREEN_WIDTH = 600
 SCREEN_HEIGHT = 600
+ROW = 3
+COL = 5
 
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -29,7 +31,7 @@ class Hero_ship(pygame.sprite.Sprite):
 
     def update(self):
         speed = 8
-        cooldown = 0
+        cooldown = 200
 
         key = pygame.key.get_pressed()
         if key[pygame.K_LEFT] and self.rect.left > 0:
@@ -62,22 +64,50 @@ class Bullets(pygame.sprite.Sprite):
         self.rect.y -= 5
         if self.rect.bottom < 0:
             self.kill()
-
-
-class Aliens(pygame.sprite.Sprite):
-    def __init__(self, x, y, health):
+class Alien_Bullets(pygame.sprite.Sprite):
+    def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load('../assets/enemy.png')
+        self.image = pygame.image.load('../assets/bullet.png')
         self.image = pygame.transform.scale(self.image, (75, 75))
         self.rect = self.image.get_rect()
         self.rect.center = [x, y]
-        self.health_start = health
-        self.health_remaining = health
+
+    def update(self):
+        self.rect.y += 2
+        if self.rect.top > 0:
+            self.kill()
+
+class Aliens(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load('../assets/enemy.png')
+        self.image = pygame.transform.scale(self.image, (50, 50))
+        self.rect = self.image.get_rect()
+        self.rect.center = [x, y]
+        self.move_counter = 0
+        self.move_direction = 1
+
+    def update(self):
+        self.rect.x += self.move_direction
+        self.move_counter += 1
+        if abs(self.move_counter) > 75:
+            self.move_direction *= -1
+            self.move_counter *= self.move_direction
 
 
 hero_group = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
+alien_group = pygame.sprite.Group()
+alien_bullet_group = pygame.sprite.Group()
 
+def create_aliens():
+    for row in range(ROW):
+        for item in range(COL):
+            alien = Aliens(100 + item * 100, 100 + row * 70)
+            alien_group.add(alien)
+
+
+create_aliens()
 hero_ship = Hero_ship(int(SCREEN_WIDTH / 2), int(SCREEN_HEIGHT - 70), 3)
 hero_group.add(hero_ship)
 
@@ -105,8 +135,15 @@ while run:
 
     hero_ship.update()
     bullet_group.update()
+    alien_group.update()
+    alien_bullet_group.update()
+
+
     #update sprite groups
     hero_group.draw(screen)
     bullet_group.draw(screen)
+    alien_group.draw(screen)
+    alien_bullet_group.draw(screen)
+
     pygame.display.update()
 pygame.quit()
