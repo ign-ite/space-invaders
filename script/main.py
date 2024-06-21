@@ -1,12 +1,15 @@
 import pygame
 from pygame.locals import *
 from enemy import Enemy
-from random import randint
+import random
 
 SCREEN_WIDTH = 600
 SCREEN_HEIGHT = 600
 ROW = 3
 COL = 5
+ALIEN_COOLDOWN = 1000
+last_alien_shot = pygame.time.get_ticks()
+
 
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -43,6 +46,9 @@ class Hero_ship(pygame.sprite.Sprite):
             bullet = Bullets(self.rect.centerx, self.rect.top)
             bullet_group.add(bullet)
             self.last_shot = time_now
+
+
+        self.mask = pygame.mask.from_surface(self.image)
         #draw health bar
         pygame.draw.rect(screen, 'red', (self.rect.x, (self.rect.bottom - 10), self.rect.width, 15))
         if self.health_remaining > 0:
@@ -64,17 +70,23 @@ class Bullets(pygame.sprite.Sprite):
         self.rect.y -= 5
         if self.rect.bottom < 0:
             self.kill()
+        if pygame.sprite.spritecollide(self, alien_group, True, pygame.sprite.collide_mask):
+            self.kill()
+
 class Alien_Bullets(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load('../assets/bullet.png')
+        self.image = pygame.image.load('../assets/bullet2.png')
         self.image = pygame.transform.scale(self.image, (75, 75))
         self.rect = self.image.get_rect()
         self.rect.center = [x, y]
 
     def update(self):
         self.rect.y += 2
-        if self.rect.top > 0:
+        if self.rect.top > SCREEN_HEIGHT:
+            self.kill()
+        if pygame.sprite.spritecollide(self, hero_group, False, pygame.sprite.collide_mask):
+            hero_ship.health_remaining -= 1
             self.kill()
 
 class Aliens(pygame.sprite.Sprite):
@@ -93,7 +105,7 @@ class Aliens(pygame.sprite.Sprite):
         if abs(self.move_counter) > 75:
             self.move_direction *= -1
             self.move_counter *= self.move_direction
-
+        self.mask = pygame.mask.from_surface(self.image)
 
 hero_group = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
@@ -115,19 +127,24 @@ clock = pygame.time.Clock()
 FPS = 40
 run = True
 
-enemy_locations = [(5, 10), (65, 10), (125, 10), (185, 10), (245, 10), (305, 10), (365, 10), (425, 10), (485, 10),
-                   (545, 10),
-                   (5, 70), (65, 70), (125, 70), (185, 70), (245, 70), (305, 70), (365, 70), (425, 70), (485, 70),
-                   (545, 70),
-                   (5, 130), (65, 130), (125, 130), (185, 130), (245, 130), (305, 130), (365, 130), (425, 130),
-                   (485, 130), (545, 130)]
-ENEMIES = []
-for pos in enemy_locations:
-    enemy = Enemy(pos)
-    ENEMIES.append(enemy)
+time_lasted = pygame.time.get_ticks()
 while run:
     clock.tick(FPS)
     draw_bg()
+    time_now = pygame.time.get_ticks()
+    if len(alien_group.sprites()) ==0:
+        print(f"Congrats! You finished the game in {( time_now - time_lasted) / 1000} seconds..")
+        run = False
+    if hero_ship.health_remaining == 0:
+        print("You lost!")
+        print(f"You lasted for {(time_now - time_lasted) / 1000} seconds.")
+        run = False
+    if (time_now - last_alien_shot) > ALIEN_COOLDOWN:
+        attacking_alien = random.choice(alien_group.sprites())
+        alien_bullet = Alien_Bullets(attacking_alien.rect.centerx, attacking_alien.rect.bottom)
+        alien_bullet_group.add(alien_bullet)
+        last_alien_shot = time_now
+
 
     for event in pygame.event.get():
         if event.type == QUIT:
